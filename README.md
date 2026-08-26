@@ -3,6 +3,7 @@ Upload a file containing data in a spreadsheet format (.xlsx, .csv), select whic
 - download diagram as png or jpg
 - sort data by ... ascending/descending
 - avg, median, modus, count, standardabweichung/varianz berechnen
+  - top ... auflisten, anteil, anzahl
 - select spreadsheet
 - search function for categorical columns
 - getting started
