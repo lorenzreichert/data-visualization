@@ -6,3 +6,4 @@ Upload a file containing data in a spreadsheet format (.xlsx, .csv), select whic
 - select spreadsheet
 - search function for categorical columns
 - getting started
+- project letterboxd stats (csv export -> analyze + visualize)
