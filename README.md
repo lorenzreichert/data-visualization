@@ -5,3 +5,4 @@ Upload a file containing data in a spreadsheet format (.xlsx, .csv), select whic
 - avg, median, modus, count, standardabweichung/varianz berechnen
 - select spreadsheet
 - search function for categorical columns
+- getting started
