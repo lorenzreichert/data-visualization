@@ -3,8 +3,10 @@ Upload a file containing data in a spreadsheet format (.xlsx, .csv), select whic
 - download diagram as png or jpg
 - sort data by ... ascending/descending
 - avg, median, modus, count, standardabweichung/varianz berechnen
-  - top ... auflisten, anteil, anzahl
+  - list top ... entries, *percentage*, count
+  - stacked bar chart (and pie chart) with share per bar 
 - select spreadsheet
 - search function for categorical columns
 - getting started
 - project letterboxd stats (csv export -> analyze + visualize)
+- regression target variable, correlation/similarity of variables, data science stuff

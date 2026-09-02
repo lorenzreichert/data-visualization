@@ -20,12 +20,22 @@ st.set_page_config(
 # ---------------------------------------------------------
 def load_data(uploaded_file):
     if uploaded_file.name.endswith(".csv"):
-        return pd.read_csv(uploaded_file)
+        return pd.read_csv(uploaded_file), None
 
     elif uploaded_file.name.endswith(".xlsx"):
-        return pd.read_excel(uploaded_file)
+        excel_file = pd.ExcelFile(uploaded_file)
+        sheets = excel_file.sheet_names
+        selected_sheet = st.selectbox(
+            "Select spreadsheet",
+            sheets
+        )
 
-    raise ValueError("File extension must be .csv or .xlsx")
+        data_frame = pd.read_excel(uploaded_file, sheet_name=selected_sheet)
+
+        return data_frame, selected_sheet
+
+    else:
+        raise ValueError("File type not supported. File extension must be .csv or .xlsx")
 
 
 # ---------------------------------------------------------
@@ -44,7 +54,7 @@ if file is None:
     st.stop()
 
 try:
-    df = load_data(file)
+    df, selected_sheet = load_data(file)
 
 except Exception as e:
     st.error(f"Error occurred: {e}")
