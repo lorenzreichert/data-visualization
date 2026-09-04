@@ -4,6 +4,7 @@ import plotly.express as px
 import io
 import numpy as np
 from nicegui import ui
+import helpers
 
 # ---------------------------------------------------------
 # UI config
@@ -13,30 +14,6 @@ st.set_page_config(
     page_icon="📊",
     layout="wide"
 )
-
-
-# ---------------------------------------------------------
-# Load data from file
-# ---------------------------------------------------------
-def load_data(uploaded_file):
-    if uploaded_file.name.endswith(".csv"):
-        return pd.read_csv(uploaded_file), None
-
-    elif uploaded_file.name.endswith(".xlsx"):
-        excel_file = pd.ExcelFile(uploaded_file)
-        sheets = excel_file.sheet_names
-        selected_sheet = st.selectbox(
-            "Select spreadsheet",
-            sheets
-        )
-
-        data_frame = pd.read_excel(uploaded_file, sheet_name=selected_sheet)
-
-        return data_frame, selected_sheet
-
-    else:
-        raise ValueError("File type not supported. File extension must be .csv or .xlsx")
-
 
 # ---------------------------------------------------------
 # Upload file
@@ -54,7 +31,7 @@ if file is None:
     st.stop()
 
 try:
-    df, selected_sheet = load_data(file)
+    df, selected_sheet = helpers.load_data(file)
 
 except Exception as e:
     st.error(f"Error occurred: {e}")
@@ -132,6 +109,26 @@ st.subheader("Filtered data")
 st.write(f"{len(filtered_df):,} of {len(df):,} lines")
 st.dataframe(filtered_df, use_container_width=True, height=400)
 
+# ---------------------------------------------------------
+# CSV download
+# ---------------------------------------------------------
+st.subheader("Export")
+csv_data = filtered_df.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    label="Download filtered data as CSV",
+    data=csv_data,
+    file_name="filtered_data.csv",
+    mime="text/csv",
+)
+
+# ---------------------------------------------------------
+# Data information
+# ---------------------------------------------------------
+st.subheader("Data information")
+df_measures = helpers.get_measures(filtered_df)
+st.dataframe(df_measures)
+
 # TODO: sort data ascending/descending
 # TODO: more customization
 # ---------------------------------------------------------
@@ -143,14 +140,23 @@ if len(numeric_columns) == 0:
     st.info("At least one numeric columns needed for diagrams")
 
 else:
+
+    # datetime -> categoric: year, month, calendar week
+    # numeric -> categoric: interval of X years, starting with -> Year / X (include factor starting with)
+    # interval = Year / X * 10 + startingWithFactor to Year / X * 10 + startingWithFactor + X - 1
     chart_type = st.selectbox(
         "Diagram type",
         [
-            "Bar chart",
-            "Line chart",
-            "Pie chart",
-            "Area chart",
-            "Scatterplot"
+            "Bar chart",  # x, y
+            "Line chart",  # x, y
+            "Pie chart",  # 1 attribute (categorical) with share
+            "Area chart",  # x, y, grouping?
+            "Venn diagram",  # select X attributes and their shares
+            "Stacked bar chart",  # x, y, grouping? -> share per bar
+            "Scatterplot",  # x, y, categorical (colour), numeric (size)
+            "Boxplot",
+            "Heatmap",
+            "Top list sorted"  # Top X list of attribute Y (quantified), sorted (ascending/descending) by Y or Z(?)
         ]
     )
 
@@ -184,10 +190,22 @@ else:
         )
 
     elif chart_type == "Scatterplot":
+        size_by_numerical = st.selectbox(
+            "Select numerical attribute to display data points in different sizes (optional)",
+            ["None"] + numeric_columns
+        )
+
+        color_by_categorical = st.selectbox(
+            "Select categorical attribute to display data points in different colours (optional)",
+            ["None"] + categorical_columns
+        )
+
         fig = px.scatter(
             filtered_df,
             x=x_column,
             y=y_column,
+            size=size_by_numerical if size_by_numerical != "None" else None,
+            color=color_by_categorical if color_by_categorical != "None" else None,
             title=f"{y_column} vs {x_column}",
         )
 
@@ -217,16 +235,3 @@ else:
             "PNG download not available. "
             "Is 'kaleido' installed?"
         )
-
-# ---------------------------------------------------------
-# CSV download
-# ---------------------------------------------------------
-st.subheader("Export")
-csv_data = filtered_df.to_csv(index=False).encode("utf-8")
-
-st.download_button(
-    label="Download filtered data as CSV",
-    data=csv_data,
-    file_name="filtered_data.csv",
-    mime="text/csv",
-)
