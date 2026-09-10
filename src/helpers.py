@@ -33,3 +33,9 @@ def get_measures(data_frame):
                 "Interquartile range / H-spread", "Modal value", "Modal value frequency", "Standard deviation",
                 "Variance"]
     data_frame.describe(include="all")
+
+def categorical_to_numerical(data_frame, attribute):
+    pass
+
+def numeric_to_categorical(data_frame, attribute):
+    pass

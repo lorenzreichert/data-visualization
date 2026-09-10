@@ -4,18 +4,20 @@ Upload a file containing data in a spreadsheet format (.xlsx, .csv), select whic
 - \[DONE] sort data by ... ascending/descending
 - avg, median, modus, count, standard deviation/variance
   - list top ... entries, *percentage*, count
+  - heatmap
 - Filter functions
   - search function for categorical columns
   - filter functions search, multiple choice, range
   - ignore columns
 - Diagrams
+  - Y axis: avg, median... of numeric attributes 
   - stacked bar chart (and pie chart) with share per bar 
   - boxplot
   - Venn diagram
   - Top ... list sorted (ascending/descending) by ...
-  - heatmap
 - Regression, Data Science
   - regression target variable, correlation/similarity of variables, data science stuff
+  - heatmap
 - project letterboxd stats (csv export -> analyze + visualize)
 
 # Getting Started

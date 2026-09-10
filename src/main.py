@@ -5,6 +5,8 @@ import io
 import numpy as np
 from nicegui import ui
 import helpers
+import math
+import re
 
 # ---------------------------------------------------------
 # UI config
@@ -67,6 +69,29 @@ date_columns = df.select_dtypes(include=["datetime"]).columns.tolist()
 # ---------------------------------------------------------
 st.sidebar.header("Filter")
 filtered_df = df.copy()
+text_filter = st.text_input("Input text to include or exclude data rows")
+filter_columns = st.multiselect("Select columns to which the filter applies", categorical_columns,
+                                default=categorical_columns)
+filtered_df = filtered_df[[col for col in df.columns if col in numeric_columns or col in filter_columns]]
+drop_columns = [col for col in categorical_columns if col not in filter_columns]
+is_included = st.toggle(
+    "Include data rows that contain input text",
+    value=True,
+    help="""
+        If toggled, the data rows containing the input text in one of the selected columns will be included in the data frame. 
+        If disabled, the data rows containing the input text in one of the selected columns will be excluded from the data frame.
+    """)
+
+if is_included:
+    if text_filter:
+        filtered_df = filtered_df.filter(like=text_filter, axis=0)
+else:
+    if text_filter:
+        filtered_df = filtered_df.filter(regex=f"^(?!.*{re.escape(text_filter)}).*$", axis=0)
+
+#  optional select (multiple) categorical attribute(s) for text input filter -> st.multiselect
+#  optional toggle include or exclude -> st.toggle
+#  ignore columns -> drop(list of columns, axis=1)
 
 # ---------------------------------------------------------
 # Category filter
@@ -110,6 +135,20 @@ st.write(f"{len(filtered_df):,} of {len(df):,} lines")
 st.dataframe(filtered_df, use_container_width=True, height=400)
 
 # ---------------------------------------------------------
+# Data information
+# ---------------------------------------------------------
+with st.expander("See data information"):
+    st.subheader("Data information")
+    df_measures = helpers.get_measures(filtered_df)
+    st.dataframe(df_measures)
+
+with st.expander("See attribute correlation"):
+    st.info("Feature is not implemented yet")
+
+# TODO: sort data ascending/descending
+# TODO: more customization
+
+# ---------------------------------------------------------
 # CSV download
 # ---------------------------------------------------------
 st.subheader("Export")
@@ -123,15 +162,6 @@ st.download_button(
 )
 
 # ---------------------------------------------------------
-# Data information
-# ---------------------------------------------------------
-st.subheader("Data information")
-df_measures = helpers.get_measures(filtered_df)
-st.dataframe(df_measures)
-
-# TODO: sort data ascending/descending
-# TODO: more customization
-# ---------------------------------------------------------
 # Visualization
 # ---------------------------------------------------------
 st.subheader("Visualization")
@@ -144,74 +174,122 @@ else:
     # datetime -> categoric: year, month, calendar week
     # numeric -> categoric: interval of X years, starting with -> Year / X (include factor starting with)
     # interval = Year / X * 10 + startingWithFactor to Year / X * 10 + startingWithFactor + X - 1
+
     chart_type = st.selectbox(
         "Diagram type",
         [
-            "Bar chart",  # x, y
-            "Line chart",  # x, y
-            "Pie chart",  # 1 attribute (categorical) with share
-            "Area chart",  # x, y, grouping?
+            "Bar chart",  # x, y (numerical)
+            "Line chart",  # x, y (numerical)
+            "Pie chart",  # 1 attribute with share
+            "Area chart",  # x, y (numerical), grouping?
             "Venn diagram",  # select X attributes and their shares
-            "Stacked bar chart",  # x, y, grouping? -> share per bar
-            "Scatterplot",  # x, y, categorical (colour), numeric (size)
-            "Boxplot",
-            "Heatmap",
+            "Stacked bar chart",  # x, y (numerical), grouping? -> share per bar
+            "Scatterplot",  # x, y (numerical), categorical (colour), numeric (size)
+            "Boxplot",  # x = categorical (optional), y = numerical
             "Top list sorted"  # Top X list of attribute Y (quantified), sorted (ascending/descending) by Y or Z(?)
         ]
-    )
-
-    x_column = st.selectbox(
-        "X axis",
-        df.columns
-    )
-
-    y_column = st.selectbox(
-        "Y axis",
-        numeric_columns
     )
 
     # ---------------------------------------------------------
     # Create diagram
     # ---------------------------------------------------------
-    if chart_type == "Bar chart":
-        fig = px.bar(
-            filtered_df,
-            x=x_column,
-            y=y_column,
-            title=f"{y_column} vs {x_column}",
-        )
+    match chart_type:
+        case "Bar chart":
+            # title
+            # color (auch numeric attribute) distinguish between boolean or 3/4-option attributes
+            # hover_data and labels with additional information
+            # histogram option
+            # text_auto enable/disable
+            x_column = st.selectbox("X axis", df.columns)
+            y_column = st.selectbox("Y axis", numeric_columns)
 
-    elif chart_type == "Line chart":
-        fig = px.line(
-            filtered_df,
-            x=x_column,
-            y=y_column,
-            title=f"{y_column} vs {x_column}",
-        )
+            fig = px.bar(
+                filtered_df,
+                x=x_column,
+                y=y_column,
+                title=f"{y_column} vs {x_column}",
+            )
 
-    elif chart_type == "Scatterplot":
-        size_by_numerical = st.selectbox(
-            "Select numerical attribute to display data points in different sizes (optional)",
-            ["None"] + numeric_columns
-        )
+        case "Line chart":
+            # color (und symbol) option to distinguish between boolean or 3/4-option attributes
+            # sinnvollerweise ist wenn x=categorical ist, y=quantified(x) d.h. anzahl oder anteil (oder anzahl einzigartiger)
+            # text option zum anzeigen für datenpunkte
+            # markers option zum anzeigen von datenpunkten
+            # hover_data and labels with additional information
+            x_column = st.selectbox("X axis", df.columns)
+            y_column = st.selectbox("Y axis", numeric_columns)
 
-        color_by_categorical = st.selectbox(
-            "Select categorical attribute to display data points in different colours (optional)",
-            ["None"] + categorical_columns
-        )
+            fig = px.line(
+                filtered_df,
+                x=x_column,
+                y=y_column,
+                title=f"{y_column} vs {x_column}",
+            )
 
-        fig = px.scatter(
-            filtered_df,
-            x=x_column,
-            y=y_column,
-            size=size_by_numerical if size_by_numerical != "None" else None,
-            color=color_by_categorical if color_by_categorical != "None" else None,
-            title=f"{y_column} vs {x_column}",
-        )
+        case "Pie chart":
+            # names (grouping)
+            # title
+            # display share or total amount (boolean option)
+            # hover_data and labels with additional information
+            st.info("This diagram type is not supported yet")
+            attribute = st.selectbox(df.columns)
+            if attribute in numeric_columns:
+                interval_size = st.number_input("Set the interval size", value=df[attribute].std(), min_value=0,
+                                                max_value=df[attribute].max())
+                start_interval_at = st.number_input("Start interval at",
+                                                    min_value=math.floor(df[attribute].min() / 10) * 10)
+                filtered_df = filtered_df[attribute]
 
-    else:
-        st.info("This diagram type is not yet supported")
-        st.stop()
+        case "Area chart":  # Area chart
+            st.info("This diagram type is not supported yet")
+
+        case "Venn diagram":  # Venn diagram
+            st.info("This diagram type is not supported yet")
+
+        case "Stacked bar chart":  # Stacked bar chart
+            st.info("This diagram type is not supported yet")
+
+        case "Scatterplot":  # Scatterplot
+            x_column = st.selectbox("X axis", df.columns)
+            y_column = st.selectbox("Y axis", numeric_columns)
+
+            size_by_numerical = st.selectbox(
+                "Select numerical attribute to display data points in different sizes (optional)",
+                ["None"] + numeric_columns
+            )
+
+            color_by_categorical = st.selectbox(
+                "Select categorical attribute to display data points in different colours (optional)",
+                ["None"] + categorical_columns + numeric_columns
+            )
+
+            if color_by_categorical != "None" and color_by_categorical in numeric_columns:
+                # TODO: Min value, max_value based on ...
+                interval_size = st.number_input("Set the interval size", value=df[color_by_categorical].std(), min_value=0,
+                                                max_value=df[color_by_categorical].max())
+                start_interval_at = st.number_input("Start interval at",
+                                                    min_value=math.floor(df[color_by_categorical].min() / 10) * 10)
+
+            fig = px.scatter(
+                filtered_df,
+                x=x_column,
+                y=y_column,
+                size=size_by_numerical if size_by_numerical != "None" else None,
+                color=color_by_categorical if color_by_categorical != "None" else None,
+                title=f"{y_column} vs {x_column}",
+            )
+
+        case "Boxplot":  # Boxplot
+            # x column (categorical) optional,
+            # show all data points (boolean),
+            # title (deduce from given numeric attribute),
+            # notched True/False
+            # color: distinguish between boolean or 3-option attributes
+            # feature: grouped boxplots
+            st.info("This diagram type is not yet supported")
+
+        case "Top list sorted":  # List
+            st.info("This diagram type is not yet supported")
 
     # ---------------------------------------------------------
     # Show diagram
