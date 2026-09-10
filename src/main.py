@@ -195,19 +195,48 @@ else:
     # ---------------------------------------------------------
     match chart_type:
         case "Bar chart":
-            # title
             # color (auch numeric attribute) distinguish between boolean or 3/4-option attributes
             # hover_data and labels with additional information
             # histogram option
             # text_auto enable/disable
             x_column = st.selectbox("X axis", df.columns)
-            y_column = st.selectbox("Y axis", numeric_columns)
+            y_column = st.selectbox("Y axis", ["Count", "Unique", "Share"] + numeric_columns)
+
+            # ---------------------------------------------------------
+            # numeric y column
+            # ---------------------------------------------------------
+            if y_column in numeric_columns:
+                y_column_numeric_metric = st.selectbox(
+                    "Metric",
+                    ["Sum", "Mean value", "Minimum", "Median", "Maximum", "Range", "Interquartile range / H-spread",
+                     "Modal value", "Modal value frequency", "Standard deviation", "Variance"]
+                )
+
+                grouped = filtered_df.groupby(x_column)[y_column]
+                plot_df = helpers.get_metric(grouped, y_column_numeric_metric)
+                plot_df = plot_df.reset_index(name="Value")
+                diagram_title = f"{y_column_numeric_metric} of {y_column} by {x_column}"
+            else:
+                grouped = filtered_df.groupby(x_column)
+                match y_column:
+                    case "Count":
+                        plot_df = grouped.size().reset_index(name="Value")
+                        diagram_title = f"Count by {x_column}"
+                    case "Unique":
+                        unique_attribute = st.selectbox("Attribute", df.columns)
+                        plot_df = grouped[unique_attribute].nunique().reset_index(name="Value")
+                        diagram_title = f"Unique {unique_attribute} by {x_column}"
+                    case "Share":
+                        plot_df = (grouped.size().div(len(filtered_df)).mul(100)).reset_index(name="Value")
+                        diagram_title = f"Share by {x_column}"
+                    case _:
+                        pass
 
             fig = px.bar(
-                filtered_df,
+                plot_df,
                 x=x_column,
-                y=y_column,
-                title=f"{y_column} vs {x_column}",
+                y="Value",
+                title=diagram_title,
             )
 
         case "Line chart":
@@ -265,7 +294,8 @@ else:
 
             if color_by_categorical != "None" and color_by_categorical in numeric_columns:
                 # TODO: Min value, max_value based on ...
-                interval_size = st.number_input("Set the interval size", value=df[color_by_categorical].std(), min_value=0,
+                interval_size = st.number_input("Set the interval size", value=df[color_by_categorical].std(),
+                                                min_value=0,
                                                 max_value=df[color_by_categorical].max())
                 start_interval_at = st.number_input("Start interval at",
                                                     min_value=math.floor(df[color_by_categorical].min() / 10) * 10)
