@@ -79,7 +79,7 @@ is_included = st.toggle(
     value=True,
     help="""
         If toggled, the data rows containing the input text in one of the selected columns will be included in the data frame. 
-        If disabled, the data rows containing the input text in one of the selected columns will be excluded from the data frame.
+        Otherwise, the data rows containing the input text in one of the selected columns will be excluded from the data frame.
     """)
 
 if is_included:
@@ -179,6 +179,7 @@ else:
         "Diagram type",
         [
             "Bar chart",  # x, y (numerical)
+            "Histogram",
             "Line chart",  # x, y (numerical)
             "Pie chart",  # 1 attribute with share
             "Area chart",  # x, y (numerical), grouping?
@@ -195,12 +196,14 @@ else:
     # ---------------------------------------------------------
     match chart_type:
         case "Bar chart":
+            # TODO: only allow those attributes on x axis that have less than 20 unique values
             # color (auch numeric attribute) distinguish between boolean or 3/4-option attributes
             # hover_data and labels with additional information
             # histogram option
             # text_auto enable/disable
             x_column = st.selectbox("X axis", df.columns)
             y_column = st.selectbox("Y axis", ["Count", "Unique", "Share"] + numeric_columns)
+            color_attribute = st.selectbox("Color attribute", ["None"] + categorical_columns + numeric_columns)
 
             # ---------------------------------------------------------
             # numeric y column
@@ -237,7 +240,11 @@ else:
                 x=x_column,
                 y="Value",
                 title=diagram_title,
+                color=color_attribute if color_attribute != "None" else None
             )
+
+        case "Histogram":
+            st.info("This diagram type is not supported yet")
 
         case "Line chart":
             # color (und symbol) option to distinguish between boolean or 3/4-option attributes
@@ -252,7 +259,7 @@ else:
                 filtered_df,
                 x=x_column,
                 y=y_column,
-                title=f"{y_column} vs {x_column}",
+                title=f"{y_column} vs {x_column}"
             )
 
         case "Pie chart":
@@ -268,6 +275,14 @@ else:
                 start_interval_at = st.number_input("Start interval at",
                                                     min_value=math.floor(df[attribute].min() / 10) * 10)
                 filtered_df = filtered_df[attribute]
+
+            st.toggle(
+                "Display percentages",
+                value=True,
+                help="""
+                If toggled, the share of the respective attributes will be shown in percentages. 
+                Otherwise, absolute numbers will be shown.
+                """)
 
         case "Area chart":  # Area chart
             st.info("This diagram type is not supported yet")
@@ -319,7 +334,9 @@ else:
             st.info("This diagram type is not yet supported")
 
         case "Top list sorted":  # List
+            # todo integrate this into bar chart section, along with histogram -> normal bar chart, histogram or list
             st.info("This diagram type is not yet supported")
+            st.slider("Select number of elements", 1, 25, 10)
 
     # ---------------------------------------------------------
     # Show diagram
@@ -343,3 +360,7 @@ else:
             "PNG download not available. "
             "Is 'kaleido' installed?"
         )
+
+with st.expander("Regression"):
+    st.subheader("Regression")
+    st.info("This feature is not implemented yet")
